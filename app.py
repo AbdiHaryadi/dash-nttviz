@@ -1,8 +1,11 @@
 from dash import Dash, dcc, html, Input, Output
 import json
+import logging
 import pandas as pd
 import plotly.express as px
 import webbrowser
+
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 app = Dash(__name__)
 regions = [
@@ -113,4 +116,5 @@ def update_graph(*inputs):
     return (fig,)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    webbrowser.open("http://127.0.0.1:8050/", new=0, autoraise=True)
+    app.run(debug=False)
