@@ -2,6 +2,7 @@ from dash import Dash, dcc, html, Input, Output
 import json
 import pandas as pd
 import plotly.express as px
+import webbrowser
 
 app = Dash(__name__)
 regions = [
@@ -112,4 +113,4 @@ def update_graph(*inputs):
     return (fig,)
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run(debug=True)
