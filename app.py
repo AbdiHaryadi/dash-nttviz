@@ -3,36 +3,20 @@ import json
 import logging
 import pandas as pd
 import plotly.express as px
+import re
 import webbrowser
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
-app = Dash(__name__)
-regions = [
-    "Alor",
-    "Belu",
-    "Ende",
-    "FloresTimur",
-    "KotaKupang",
-    "Kupang",
-    "Lembata",
-    "Manggarai",
-    "ManggaraiBarat",
-    "ManggaraiTimur",
-    "Nagekeo",
-    "Ngada",
-    "RoteNdao",
-    "SabuRaijua",
-    "Sikka",
-    "SumbaBarat",
-    "SumbaBaratDaya",
-    "SumbaTengah",
-    "SumbaTimur",
-    "TimorTengahSelatan",
-    "TimorTengahUtara"
-]
+number_matcher = re.compile(r"([0-9]+\.?|[0-9]*\.[0-9]+)")
 
-with open("ntt_map.json") as fp:
+app = Dash(__name__)
+with open("config.json") as fp:
+    config = json.load(fp)
+
+regions: list[str] = config["regions"]
+
+with open(config["map_path"]) as fp:
     geojson = json.load(fp)
 
 table_body = html.Tbody(id="table-body")
@@ -40,7 +24,7 @@ table_body.children = []
 
 inputs_for_callback = []
 for r in regions:
-    dcc_input = dcc.Input(50, type="number")
+    dcc_input = dcc.Input("50")
     displayed_r = ""
     for c in r:
         if c.isupper() and displayed_r != "":
@@ -70,12 +54,12 @@ app.layout = html.Div([
         ]),
         html.Div([
             html.Label("Minimum", htmlFor="minimum"),
-            dcc.Input(id="minimum", type="number", value=0, style={
+            dcc.Input(id="minimum", value="", style={
                 "margin-left": "8px"
             }),
             html.Br(),
             html.Label("Maximum", htmlFor="maximum"),
-            dcc.Input(id="maximum", type="number", value=100, style={
+            dcc.Input(id="maximum", value="", style={
                 "margin-left": "8px"
             })
         ])
@@ -95,9 +79,28 @@ app.layout = html.Div([
     Input("maximum", "value"),
 ])
 def update_graph(*inputs):
-    values = inputs[:-2]
-    min_value = inputs[-2]
-    max_value = inputs[-1]
+    values = [to_number_or_none(v) for v in inputs[:-2]]
+    min_value = to_number_or_none(inputs[-2])
+    max_value = to_number_or_none(inputs[-1])
+
+    if min_value is None or max_value is None:
+        non_null_values = [v for v in values if v is not None]
+        if len(non_null_values) > 0:
+            if min_value is None:
+                min_value = min(non_null_values)
+
+            if max_value is None:
+                max_value = min(non_null_values)
+        else:
+            if min_value is None:
+                if max_value is None:
+                    min_value = 0.0
+                    max_value = 0.0
+                else:
+                    min_value = max_value
+            elif max_value is None:
+                max_value = min_value
+
     df = pd.DataFrame({
         "Daerah": regions,
         "Nilai": values
@@ -105,7 +108,7 @@ def update_graph(*inputs):
 
     fig = px.choropleth(
         df, geojson=geojson, color="Nilai",
-        locations="Daerah", featureidkey="properties.NAME_2",
+        locations="Daerah", featureidkey=config["name_attribute"],
         color_continuous_scale="RdYlGn",
         range_color=[min_value, max_value]
     )
@@ -114,6 +117,25 @@ def update_graph(*inputs):
     fig.update_layout(autosize=False)
 
     return (fig,)
+
+def to_number_or_none(v: str):
+    # We use Indonesian locale
+    v = v.strip()
+    v = v.replace(".", "")
+    v = v.replace(",", ".")
+
+    match_obj = number_matcher.search(v)
+    if match_obj is None:
+        return None
+    
+    v = match_obj.group(0)
+
+    try:
+        new_v = float(v.strip())
+    except ValueError:
+        new_v = None
+
+    return new_v
 
 if __name__ == "__main__":
     webbrowser.open("http://127.0.0.1:8050/", new=0, autoraise=True)

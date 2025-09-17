@@ -16,5 +16,5 @@ Dash-Based NTT (_Nusa Tenggara Timur_) Visualization is a simple app based on [D
 2. Open [`http://127.0.0.1:8050/`](http://127.0.0.1:8050/) in any browser.
 
 ## Dependencies
-- NTT GeoJSON: [GADM (Database of Global Administrative Areas)](https://gadm.org/)
+- NTT GeoJSON: [JfrAziz](https://github.com/JfrAziz/indonesia-district)
 - Visualizer main dependency: [Dash](https://plotly.com/dash/)
